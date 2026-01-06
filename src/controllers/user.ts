@@ -79,7 +79,27 @@ export const getProfile = asyncHandler(async (req: Request, res: Response) => {
   sendResponse(res, 200, "User data fetched successfully", data)
 })
 
-export const editProfile = asyncHandler(async(req : Request, res : Response)=>{
+export const editProfile = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.userId;
-  const {email , bio , gender , username} = req.body;
+  const { bio, gender, username, profilePicture } = req.body;
+
+  const user = await User.findById(userId)
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+  if (bio) {
+    user.bio = bio
+  }
+  if (gender) {
+    user.gender = gender
+  }
+  if (username) {
+    user.username = username
+  }
+  if (profilePicture) {
+    user.profilePicture = profilePicture
+  }
+  const updatedUser = await User.findByIdAndUpdate(userId, user, { new: true, runValidators: true }).select("-password")
+  sendResponse(res, 200, "User profile updated successfully", updatedUser)
+
 })

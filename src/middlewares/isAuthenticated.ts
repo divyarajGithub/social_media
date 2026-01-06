@@ -5,8 +5,8 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 
 export const isAuthenticated = asyncHandler(
   async (req: Request, _res: Response, next: NextFunction) => {
-    const token = req.cookies?.accessToken;
-
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith("Bearer") ? authHeader.split(' ')[1] : null
     if (!token) {
       throw new ApiError(401, "User is not authenticated!");
     }
@@ -18,7 +18,7 @@ export const isAuthenticated = asyncHandler(
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET
-    ) as JwtPayload ;
+    ) as JwtPayload;
 
     if (!decoded?.userId) {
       throw new ApiError(401, "Invalid token");
