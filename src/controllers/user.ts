@@ -5,6 +5,8 @@ import { ApiError } from "../utils/ApiError";
 import bcrypt from "bcrypt";
 import { sendResponse } from "../utils/sendResponse";
 import jwt from 'jsonwebtoken'
+import mongoose from "mongoose";
+
 export const signup = asyncHandler(async (req: Request, res: Response) => {
   const { email, username, password } = req.body;
   if (!email || !username || !password) {
@@ -102,4 +104,37 @@ export const editProfile = asyncHandler(async (req: Request, res: Response) => {
   const updatedUser = await User.findByIdAndUpdate(userId, user, { new: true, runValidators: true }).select("-password")
   sendResponse(res, 200, "User profile updated successfully", updatedUser)
 
+})
+
+export const getSuggestedUser = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.userId
+  const users = await User.find({ _id: { $ne: userId } })
+  sendResponse(res, 200, "Suggested users fetch successfully", users)
+})
+
+export const followUnfollow = asyncHandler(async (req: Request, res: Response) => {
+  console.log("api route hit" , req.body)
+  const loggedInId = req.userId;
+  const userIdToFollow: string = req.body.id;
+
+  if (loggedInId === userIdToFollow) {
+    throw new ApiError(400, "You can not follow yourself")
+  }
+  const exists = await User.exists({
+    _id: userIdToFollow,
+    followers: {
+      $in: [new mongoose.Types.ObjectId(loggedInId)]
+    }
+  });
+  if (exists) {
+    Promise.all([User.findByIdAndUpdate(userIdToFollow, { $pull: { followers: loggedInId } }),
+    User.findByIdAndUpdate(loggedInId, { $pull: { following: userIdToFollow } })])
+    sendResponse(res, 200, "Unfollowed successfully")
+
+  } else {
+    Promise.all([User.findByIdAndUpdate(userIdToFollow, { $addToSet: { followers: loggedInId } }),
+    User.findByIdAndUpdate(loggedInId, { $addToSet: { following: userIdToFollow } })])
+    sendResponse(res, 200, "Followed successfully")
+
+  }
 })
